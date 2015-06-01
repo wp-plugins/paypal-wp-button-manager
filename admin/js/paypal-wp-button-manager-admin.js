@@ -30,7 +30,15 @@ jQuery(function ($) {
         tb_show('', 'media-upload.php?type=image&amp;TB_iframe=true');
         return false;
     });
-
+    
+    jQuery('#ipn_url_chk').click(function() {
+        if (jQuery(this).is(':checked')) {
+            jQuery('#ipn_urlinput').removeAttr('disabled');
+        } else {
+            
+            jQuery('#ipn_urlinput').attr('disabled', 'disabled');
+        }
+    });
     window.send_to_editor = function(html) {
         var imgurl = jQuery('img',html).attr('src');
         jQuery('#wpss_upload_image').val(imgurl);
@@ -38,8 +46,119 @@ jQuery(function ($) {
 
         jQuery('.previewCustomImageSection').html("<img height='65' src='"+imgurl+"'/>");
     }
-    /////////////////////////////////////////////////////////////////////////////////////// 
+ 
     
+  
+    /*=========================================================================================================================*/
+  
+    jQuery('#ddl_companyname').change(function() {
+        var ddl_companyname = jQuery(this).val();
+        var data = {
+            'action': 'checkconfig',
+            'ddl_companyname': ddl_companyname
+        };
+        var wp_adminurl = paypal_wp_button_manager_wpurl.wp_admin_url;
+        if (ddl_companyname == '') {
+        	jQuery('.cls_wrap').css('display','none');
+				
+        }
+        jQuery.post(ajaxurl, data, function(response) {
+					
+            if (response == '1'){
+                jQuery('#go_to_settings').html('');
+                jQuery('.cls_wrap').css('display','inline');
+            }else if (response == '2'){
+                jQuery('.cls_wrap').css('display','none');
+					
+                jQuery('#go_to_settings').html("Please fill your API credentials properly for that account to work.&nbsp;&nbsp;<a href='" + wp_adminurl + "'>Go to API Settings</a>");
+																
+            }else {
+					
+            }
+	    	
+				
+        });
+    
+    });  
+  
+  
+  
+ jQuery('.submitdelete').click(function(e) {
+ 		
+        var post_id = jQuery(this).attr('href');
+        var cur_post_type = jQuery(location).attr('href');  
+        var del_post_id = parseURL(post_id);
+        var action_name = parseURL_action(post_id);
+        var current_post_page = parseURL_post_type(cur_post_type);
+        if (current_post_page == 'paypal_buttons' && action_name == 'delete') {
+			e.preventDefault();
+			 var data1 = {
+                    'action': 'checkhosted_button',
+                    'btnid': del_post_id
+                };
+        	jQuery.post(ajaxurl, data1, function(response) {
+        	
+        		if(response) {
+        			var istrue = (confirm('Do you want to also delete the button from PayPal ?'));
+        				
+        			if (istrue)  {
+        				
+        					 var data = {
+	                   		 'action': 'delete_paypal_button',
+	                  		 'del_post_id': del_post_id
+	              			  };
+        					
+        					 jQuery.post(ajaxurl, data, function(response) {
+	                    		location.reload();		
+	              			  });
+        				
+        				}else {
+        					
+							var data3 = {
+	                   		 'action': 'delete_post_own',
+	                  		 'del_post': del_post_id
+	              			  };
+        					
+        					 jQuery.post(ajaxurl, data3, function(response) {
+	                    				location.reload();
+	              			  });
+        				}
+        			
+        		}else {
+        			 		var data2 = {
+	                   		 'action': 'delete_post_own',
+	                  		 'del_post': del_post_id
+	              			  };
+        					
+        					 jQuery.post(ajaxurl, data2, function(response) {
+	                    				location.reload();
+	              			  });
+        		
+	              }
+        		
+				
+			});
+        }
+    });
+ 
+    
+     function sleep(milliseconds) {
+  var start = new Date().getTime();
+  for (var i = 0; i < 1e7; i++) {
+    if ((new Date().getTime() - start) > milliseconds){
+      break;
+    }
+  }
+}
+    function parseURL(theLink) {
+        return decodeURI((RegExp("post" + '=' + '(.+?)(&|$)').exec(theLink) || [, null])[1]);
+    }
+    function parseURL_action(theAction) {
+        return decodeURI((RegExp("action" + '=' + '(.+?)(&|$)').exec(theAction) || [, null])[1]);
+    }
+    function parseURL_post_type(thePosttype) {
+        return decodeURI((RegExp("post_type" + '=' + '(.+?)(&|$)').exec(thePosttype) || [, null])[1]);
+    }
     
     jQuery('#buttonType').change(function() {
         var img_type = jQuery(this).val();
@@ -56,7 +175,7 @@ jQuery(function ($) {
     });
 
     var select_all = function(control){
-        // alert(document.getElementById("showthis").value);
+       
         jQuery(control).focus().select();
         var copy = $(control).val();
     //window.prompt ("Copy to clipboard: Ctrl+C, Enter", copy);
@@ -119,6 +238,7 @@ jQuery(function ($) {
             });
         });
     }
+   
 
 
 	

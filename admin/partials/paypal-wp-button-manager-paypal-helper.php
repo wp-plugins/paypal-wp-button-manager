@@ -55,25 +55,36 @@ class AngellEYE_PayPal_WP_Button_Manager_PayPal_Helper {
      * @access public
      */
     public function paypal_wp_button_manager_get_paypalconfig() {
-        if (get_option('enable_sandbox') == 'yes') {
-            $apitype = TRUE;
-            $APIUsername = get_option('paypal_api_username_sandbox');
-            $APIPassword = get_option('paypal_password_sandbox');
-            $APISignature = get_option('paypal_signature_sandbox');
-        } else {
-            $apitype = FALSE;
-            $APIUsername = get_option('paypal_api_username_live');
-            $APIPassword = get_option('paypal_password_live');
-            $APISignature = get_option('paypal_signature_live');
+
+
+        if (isset($_POST['ddl_companyname']) && !empty($_POST['ddl_companyname'])) {
+            global $wpdb;
+            $flag = '';
+            $tbl_name = $wpdb->prefix . 'paypal_wp_button_manager_companies'; // do not forget about tables prefix
+            $getconfig = $wpdb->get_row("SELECT * FROM `{$tbl_name}` where ID='$_POST[ddl_companyname]'");
+            $is_sandbox = isset($getconfig->paypal_mode) ? $getconfig->paypal_mode : '';
+            if (isset($is_sandbox) && !empty($is_sandbox)) {
+                if ($is_sandbox == 'Sandbox') {
+                    $flag = TRUE;
+                } else if ($is_sandbox == 'Live') {
+                    $flag = FALSE;
+                }
+            }
+
+            $APIUsername = isset($getconfig->paypal_api_username) ? $getconfig->paypal_api_username : '';
+            $APIPassword = isset($getconfig->paypal_api_password) ? $getconfig->paypal_api_password : '';
+            $APISignature = isset($getconfig->paypal_api_signature) ? $getconfig->paypal_api_signature : '';
+
+            $payapalconfig = array('Sandbox' => $flag,
+                'APIUsername' => isset($APIUsername) ? $APIUsername : '',
+                'APIPassword' => isset($APIPassword) ? $APIPassword : '',
+                'APISignature' => isset($APISignature) ? $APISignature : '',
+                'PrintHeaders' => isset($print_headers) ? $print_headers : '',
+                'LogResults' => isset($log_results) ? $log_results : '',
+                'LogPath' => isset($log_path) ? $log_path : ''
+            );
         }
-        $payapalconfig = array('Sandbox' => $apitype,
-            'APIUsername' => isset($APIUsername) ? $APIUsername : '',
-            'APIPassword' => isset($APIPassword) ? $APIPassword : '',
-            'APISignature' => isset($APISignature) ? $APISignature : '',
-            'PrintHeaders' => isset($print_headers) ? $print_headers : '',
-            'LogResults' => isset($log_results) ? $log_results : '',
-            'LogPath' => isset($log_path) ? $log_path : ''
-        );
+
         return $payapalconfig;
     }
 
@@ -166,10 +177,32 @@ class AngellEYE_PayPal_WP_Button_Manager_PayPal_Helper {
             $item_price = '';
         }
 
+        if (isset($_POST['ddl_companyname']) && !empty($_POST['ddl_companyname'])) {
+            global $wpdb;
 
+            $get_business_tbl = $wpdb->prefix . 'paypal_wp_button_manager_companies'; // do not forget about tables prefix
+            $get_business = $wpdb->get_row("SELECT * FROM `{$get_business_tbl}` where ID='$_POST[ddl_companyname]'");
+            if (isset($get_business)) {
+				
+            	if (isset($get_business->paypal_account_mode) && !empty ($get_business->paypal_account_mode)) {
+            		$paypal_account_mode = $get_business->paypal_account_mode;
+            	}
+
+            	
+            	if (isset($paypal_account_mode) && !empty($paypal_account_mode)) {
+               			if ($paypal_account_mode == 'paypal_account_id') {
+               				$get_business_email = $get_business->paypal_merchant_id;	
+               			}else {
+               				$get_business_email = $get_business->paypal_person_email;
+               			}
+            		
+            	}
+                
+            }
+        }
 
         $buttonvars = array(
-            'notify_url' => '', // The URL to which PayPal posts information about the payment. in the form of an IPN message.
+            'notify_url' => isset($_POST['ipn_urlinput']) ? $_POST['ipn_urlinput'] : '', // The URL to which PayPal posts information about the payment. in the form of an IPN message.
             'amount' => isset($item_price) ? $item_price : '', // The price or amount of the product, service, or contribution, not including shipping, handling, or tax.  If this variable is omitted from Buy Now or Donate buttons, buyers enter their own amount at the time of the payment.
             'discount_amount' => '', // Discount amount associated with an item.  Must be less than the selling price of the item.  Valid only for Buy Now and Add to Cart buttons.
             'discount_amount2' => '', // Discount amount associated with each additional quantity of the item.  Must be equal to or less than the selling price of the item.
@@ -197,7 +230,7 @@ class AngellEYE_PayPal_WP_Button_Manager_PayPal_Helper {
             'add' => '', // Set to 1 to add an item to the PayPal shopping cart.
             'display' => '', // Set to 1 to display the contents of the PayPal shopping cart to the buyer.
             'upload' => '', // Set to 1 to upload the contents of a third-party shopping cart or a custom shopping cart.
-            'business' => isset($_POST['business']) ? $_POST['business'] : '', // Your PayPal ID or an email address associated with your PayPal account.  Email addresses must be confirmed.
+            'business' => isset($get_business_email) ? $get_business_email: '', // Your PayPal ID or an email address associated with your PayPal account.  Email addresses must be confirmed.
             'paymentaction' => '', // Indicates whether the payment is a finale sale or an authorization for a final sale, to be captured later.  Values are:  sale, authorization, order
             'shopping_url' => isset($_POST['gift_certificate_shop_url']) ? esc_url($_POST['gift_certificate_shop_url']) : '', // The URL of the page on the merchant website that buyers go to when they click the Continue Shopping button on the PayPal shopping cart page.
             'a1' => isset($_POST['subscription_trial_rate']) ? $_POST['subscription_trial_rate'] : '', // Trial period 1 price.  For a free trial period, specify 0.
@@ -227,7 +260,7 @@ class AngellEYE_PayPal_WP_Button_Manager_PayPal_Helper {
             'cpp_headerborder_color' => '', // The border color around the header of the checkout page.
             'cpp_logo_image' => '', // A URL to your logo image.  Must be .gif, .jpg, or .png.  190x60
             'cpp_payflow_color' => '', // The background color for the checkout page below the header.
-            'lc' => isset($_POST['select_country_language']) ? $_POST['select_country_language'] : '', // The locale of the login or sign-up page.
+            'lc' => '', // The locale of the login or sign-up page.
             'cn' => '', // Label that appears above the note field.
             'no_shipping' => '', // Do not prompt buyers for a shipping address.  Values are:  0 - prompt for an address but do not require.  1 - do not prompt.  2 - prompt and require address.
             'return' => isset($_POST['return']) ? esc_url($_POST['return']) : '', // The URL to which PayPal redirects buyers' browsers after they complete their payment.
@@ -252,6 +285,9 @@ class AngellEYE_PayPal_WP_Button_Manager_PayPal_Helper {
 
         return $buttonvars;
     }
+    
+    
+   
 
     /**
      * paypal_wp_button_manager_get_dropdown_values function prepairs array
@@ -264,9 +300,9 @@ class AngellEYE_PayPal_WP_Button_Manager_PayPal_Helper {
         $BMButtonOptions = array();
         $ddp_option_name = array();
 
-        $rawQueryString = file_get_contents('php://input');
+      
         $post = array();
-        foreach (explode('&', file_get_contents('php://input')) as $keyValuePair) {
+        foreach (explode('&', urldecode(file_get_contents('php://input'))) as $keyValuePair) {
             list($key, $value) = explode('=', $keyValuePair);
             $post[$key][] = $value;
         }
@@ -275,7 +311,7 @@ class AngellEYE_PayPal_WP_Button_Manager_PayPal_Helper {
             $BMButtonOptionSelections = array();
             foreach ($ddp_option_name as $ddp_option_name_key => $ddp_option_name_value) {
                 $BMButtonOptionSelection = array(
-                    'value' =>$ddp_option_name_value,
+                    'value' => $ddp_option_name_value,
                     'price' => $post['ddp_option_price'][$ddp_option_name_key],
                     'type' => ''
                 );
@@ -283,7 +319,7 @@ class AngellEYE_PayPal_WP_Button_Manager_PayPal_Helper {
                 array_push($BMButtonOptionSelections, $BMButtonOptionSelection);
             }
             $BMButtonOption = array(
-                'name' => isset($_POST['dropdown_price_title']) ? $_POST['dropdown_price_title']: '',
+                'name' => isset($_POST['dropdown_price_title']) ? $_POST['dropdown_price_title'] : '',
                 'selections' => $BMButtonOptionSelections
             );
             array_push($BMButtonOptions, $BMButtonOption);
@@ -327,5 +363,7 @@ class AngellEYE_PayPal_WP_Button_Manager_PayPal_Helper {
 
         return $paypalrequestdata;
     }
+
+    
 
 }
